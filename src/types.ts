@@ -10,7 +10,7 @@ export interface MCPServer {
 }
 
 export interface RuleFile {
-  frontmatter: Record<string, any>;
+  frontmatter: Record<string, unknown>;
   content: string;
   filename: string;
 }
@@ -18,13 +18,13 @@ export interface RuleFile {
 export interface AIConfig {
   instructions: string;
   rules: RuleFile[];
-  commands: string[];
+  commands: RuleFile[]; // Changed to support frontmatter like rules
   mcp: MCPConfig;
 }
 
 export interface GeminiSettings {
   mcpServers?: Record<string, MCPServer>;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface OpenCodeMCPServer {
@@ -36,7 +36,7 @@ export interface OpenCodeMCPServer {
 
 export interface OpenCodeConfig {
   mcp?: Record<string, OpenCodeMCPServer>;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // New provider-specific configurations

@@ -109,7 +109,18 @@ describe("generateInstructions", () => {
           filename: "rule2.md",
         },
       ],
-      commands: ["command1", "command2"],
+      commands: [
+        {
+          frontmatter: {},
+          content: "Command 1 content",
+          filename: "command1.md",
+        },
+        {
+          frontmatter: {},
+          content: "Command 2 content",
+          filename: "command2.md",
+        },
+      ],
       mcp: { mcpServers: {} },
     };
 
@@ -167,7 +178,13 @@ describe("generateFiles", () => {
           filename: "test.md",
         },
       ],
-      commands: ["test-command"],
+      commands: [
+        {
+          frontmatter: {},
+          content: "Test command content",
+          filename: "test-command.md",
+        },
+      ],
       mcp: {
         mcpServers: {
           test: {
@@ -239,5 +256,205 @@ describe("generateFiles", () => {
     expect(mcpConfig.mcpServers).toEqual({});
 
     expect(Object.keys(files[".cursor/rules"])).toHaveLength(0);
+  });
+
+  test("should generate new provider-specific files", async () => {
+    const config: AIConfig = {
+      instructions: "AI assistant instructions",
+      rules: [
+        {
+          frontmatter: { name: "test-rule" },
+          content: "Rule content",
+          filename: "test.md",
+        },
+      ],
+      commands: [
+        {
+          frontmatter: {},
+          content: "Deploy command",
+          filename: "deploy.md",
+        },
+        {
+          frontmatter: {},
+          content: "Test command",
+          filename: "test.md",
+        },
+      ],
+      mcp: {
+        mcpServers: {
+          jira: {
+            command: "bun",
+            args: ["mcps/jira.ts"],
+          },
+        },
+      },
+    };
+
+    const files = await generateFiles(config);
+
+    // Test new provider files are generated
+    expect(files["WINDSURF.md"]).toBeDefined();
+    expect(files["QODER.md"]).toBeDefined();
+    expect(files["TRAE.md"]).toBeDefined();
+    expect(files["JULES.md"]).toBeDefined();
+    expect(files["QWEN.md"]).toBeDefined();
+
+    // All instruction files should have the same content
+    const expectedContent = files["CLAUDE.md"];
+    expect(files["WINDSURF.md"]).toBe(expectedContent);
+    expect(files["QODER.md"]).toBe(expectedContent);
+    expect(files["TRAE.md"]).toBe(expectedContent);
+    expect(files["JULES.md"]).toBe(expectedContent);
+    expect(files["QWEN.md"]).toBe(expectedContent);
+  });
+
+  test("should generate Copilot CLI agent files", async () => {
+    const config: AIConfig = {
+      instructions: "Copilot instructions",
+      rules: [
+        {
+          frontmatter: { role: "planner" },
+          content: "Planning agent content",
+          filename: "planner.md",
+        },
+      ],
+      commands: [],
+      mcp: { mcpServers: {} },
+    };
+
+    const files = await generateFiles(config);
+
+    // Check .copilot/agents directory
+    expect(files[".copilot/agents"]).toBeDefined();
+    expect(files[".copilot/agents"]["planner.md"]).toContain(
+      "Planning agent content",
+    );
+  });
+
+  test("should generate Kiro configuration files", async () => {
+    const config: AIConfig = {
+      instructions: "Kiro instructions",
+      rules: [
+        {
+          frontmatter: { type: "spec" },
+          content: "Feature specification",
+          filename: "feature.md",
+        },
+      ],
+      commands: [
+        {
+          frontmatter: { type: "hook" },
+          content: "Pre-commit hook",
+          filename: "pre-commit.md",
+        },
+      ],
+      mcp: {
+        mcpServers: {
+          database: { command: "mcp-database" },
+        },
+      },
+    };
+
+    const files = await generateFiles(config);
+
+    // Check Kiro directories
+    expect(files[".kiro/specs"]).toBeDefined();
+    expect(files[".kiro/hooks"]).toBeDefined();
+    expect(files[".kiro/steering"]).toBeDefined();
+    expect(files[".kiro/mcp.json"]).toBeDefined();
+
+    const kiroMCP = JSON.parse(files[".kiro/mcp.json"]);
+    expect(kiroMCP.mcpServers.database).toEqual({ command: "mcp-database" });
+  });
+
+  test("should generate VS Code Copilot configuration", async () => {
+    const config: AIConfig = {
+      instructions: "VS Code instructions",
+      rules: [
+        {
+          frontmatter: { glob: "**/*.ts" },
+          content: "TypeScript coding standards",
+          filename: "typescript.md",
+        },
+      ],
+      commands: [
+        {
+          frontmatter: { type: "prompt" },
+          content: "Generate unit tests",
+          filename: "gen-tests.md",
+        },
+      ],
+      mcp: { mcpServers: {} },
+    };
+
+    const files = await generateFiles(config);
+
+    // Check VS Code Copilot directories
+    expect(files[".github/copilot-instructions.md"]).toBeDefined();
+    expect(files[".github/copilot-prompts"]).toBeDefined();
+    expect(files[".github/agents"]).toBeDefined();
+
+    // Instructions should include all content
+    expect(files[".github/copilot-instructions.md"]).toContain(
+      "VS Code instructions",
+    );
+    expect(files[".github/copilot-instructions.md"]).toContain(
+      "TypeScript coding standards",
+    );
+  });
+
+  test("should generate Antigravity configuration", async () => {
+    const config: AIConfig = {
+      instructions: "Antigravity instructions",
+      rules: [
+        {
+          frontmatter: { activation: "always" },
+          content: "Global rule",
+          filename: "global.md",
+        },
+      ],
+      commands: [
+        {
+          frontmatter: { type: "workflow" },
+          content: "Deploy workflow steps",
+          filename: "deploy.md",
+        },
+      ],
+      mcp: { mcpServers: {} },
+    };
+
+    const files = await generateFiles(config);
+
+    // Check Antigravity directories
+    expect(files[".agent/rules"]).toBeDefined();
+    expect(files[".agent/workflows"]).toBeDefined();
+
+    expect(files[".agent/rules"]["global.md"]).toContain("Global rule");
+    expect(files[".agent/workflows"]["deploy.md"]).toContain(
+      "Deploy workflow steps",
+    );
+  });
+
+  test("should generate Dropstone workflows", async () => {
+    const config: AIConfig = {
+      instructions: "Dropstone instructions",
+      rules: [],
+      commands: [
+        {
+          frontmatter: { autonomous: true },
+          content: "Autonomous workflow",
+          filename: "auto-fix.md",
+        },
+      ],
+      mcp: { mcpServers: {} },
+    };
+
+    const files = await generateFiles(config);
+
+    // Check Dropstone directory
+    expect(files[".dropstone/workflows"]).toBeDefined();
+    expect(files[".dropstone/workflows"]["auto-fix.md"]).toContain(
+      "Autonomous workflow",
+    );
   });
 });

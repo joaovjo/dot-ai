@@ -5,6 +5,7 @@ import type {
   GeneratedFiles,
   MCPConfig,
   OpenCodeConfig,
+  OpenCodeMCPServer,
   RuleFile,
 } from "./types.ts";
 
@@ -26,7 +27,7 @@ export async function readAIConfig(aiDir = ".ai"): Promise<AIConfig> {
     if (await instructionsFile.exists()) {
       instructions = await instructionsFile.text();
     }
-  } catch (error) {
+  } catch {
     console.warn(`Could not read instructions from ${instructionsPath}`);
   }
 
@@ -51,14 +52,22 @@ export async function readAIConfig(aiDir = ".ai"): Promise<AIConfig> {
     }
   }
 
-  // Read commands (just list them)
-  const commands: string[] = [];
+  // Read commands (now with frontmatter support)
+  const commands: RuleFile[] = [];
   const commandsDir = `${aiDir}/commands`;
   if (await directoryExists(commandsDir)) {
     try {
       const glob = new Bun.Glob("*.md");
       for await (const file of glob.scan({ cwd: commandsDir })) {
-        commands.push(file.replace(".md", ""));
+        const filePath = `${commandsDir}/${file}`;
+        const content = await Bun.file(filePath).text();
+        const { frontmatter, content: commandContent } =
+          parseFrontmatter(content);
+        commands.push({
+          frontmatter,
+          content: commandContent,
+          filename: file,
+        });
       }
     } catch {
       console.warn(`Could not read commands from ${aiDir}/commands`);
@@ -73,7 +82,7 @@ export async function readAIConfig(aiDir = ".ai"): Promise<AIConfig> {
     if (await mcpFile.exists()) {
       mcp = await mcpFile.json();
     }
-  } catch (error) {
+  } catch {
     console.warn(`Could not read MCP config from ${aiDir}/mcp.json`);
   }
 
@@ -86,7 +95,7 @@ export async function readAIConfig(aiDir = ".ai"): Promise<AIConfig> {
 }
 
 export function parseFrontmatter(content: string): {
-  frontmatter: Record<string, any>;
+  frontmatter: Record<string, unknown>;
   content: string;
 } {
   // Handle both empty and non-empty frontmatter
@@ -95,27 +104,27 @@ export function parseFrontmatter(content: string): {
   // Special case for empty frontmatter (--- immediately followed by ---)
   const emptyFrontmatterRegex = /^---\n---\n([\s\S]*)$/;
 
-  let match = content.match(frontmatterRegex);
+  const match = content.match(frontmatterRegex);
   let frontmatterYaml = "";
   let bodyContent = "";
 
   if (!match) {
     // Try the empty frontmatter case
     const emptyMatch = content.match(emptyFrontmatterRegex);
-    if (emptyMatch) {
+    if (emptyMatch?.[1]) {
       frontmatterYaml = "";
-      bodyContent = emptyMatch[1]!;
+      bodyContent = emptyMatch[1];
     } else {
       return { frontmatter: {}, content };
     }
   } else {
-    // TypeScript knows match is not null here, but destructuring still needs assertion
-    frontmatterYaml = match[1]!;
-    bodyContent = match[2]!;
+    // TypeScript knows match is not null here
+    frontmatterYaml = match[1] || "";
+    bodyContent = match[2] || "";
   }
 
   // Simple YAML parser for basic key-value pairs
-  const frontmatter: Record<string, any> = {};
+  const frontmatter: Record<string, unknown> = {};
 
   // Handle empty frontmatter case (just whitespace)
   if (!frontmatterYaml.trim()) {
@@ -168,11 +177,11 @@ export function generateInstructions(config: AIConfig): string {
     }
   }
 
-  // Add commands list
+  // Add commands list (just filenames without extension)
   if (config.commands.length > 0) {
     result += "\n## Available Commands\n\n";
     for (const command of config.commands) {
-      result += `- ${command}\n`;
+      result += `- ${command.filename.replace(".md", "")}\n`;
     }
   }
 
@@ -188,14 +197,14 @@ export async function updateProviderSettings(
   mcpConfig: MCPConfig,
   updateKey: string,
 ): Promise<void> {
-  let existingConfig: any = {};
+  let existingConfig: Record<string, unknown> = {};
 
   try {
     const file = Bun.file(filePath);
     if (await file.exists()) {
       existingConfig = await file.json();
     }
-  } catch (error) {
+  } catch {
     // File doesn't exist or invalid JSON, start fresh
     existingConfig = {};
   }
@@ -209,13 +218,12 @@ export async function updateProviderSettings(
 export async function generateFiles(config: AIConfig): Promise<GeneratedFiles> {
   const instructionsContent = generateInstructions(config);
 
-  // Generate cursor rules with frontmatter preserved
-  const cursorRules: Record<string, string> = {};
-  for (const rule of config.rules) {
+  // Helper function to create file with frontmatter
+  const createFileWithFrontmatter = (item: RuleFile): string => {
     const frontmatterString =
-      Object.keys(rule.frontmatter).length > 0
+      Object.keys(item.frontmatter).length > 0
         ? "---\n" +
-          Object.entries(rule.frontmatter)
+          Object.entries(item.frontmatter)
             .map(
               ([key, value]) =>
                 `${key}: ${typeof value === "string" ? value : JSON.stringify(value)}`,
@@ -223,8 +231,14 @@ export async function generateFiles(config: AIConfig): Promise<GeneratedFiles> {
             .join("\n") +
           "\n---\n"
         : "";
+    return frontmatterString + item.content;
+  };
+
+  // Generate cursor rules with frontmatter preserved
+  const cursorRules: Record<string, string> = {};
+  for (const rule of config.rules) {
     cursorRules[rule.filename.replace(".md", ".mdc")] =
-      frontmatterString + rule.content;
+      createFileWithFrontmatter(rule);
   }
 
   // Generate Gemini settings
@@ -233,7 +247,7 @@ export async function generateFiles(config: AIConfig): Promise<GeneratedFiles> {
   };
 
   // Generate OpenCode config - convert MCP servers to OpenCode format
-  const openCodeMcpServers: Record<string, any> = {};
+  const openCodeMcpServers: Record<string, OpenCodeMCPServer> = {};
 
   for (const [serverName, serverConfig] of Object.entries(
     config.mcp.mcpServers,
@@ -252,14 +266,97 @@ export async function generateFiles(config: AIConfig): Promise<GeneratedFiles> {
     mcp: openCodeMcpServers,
   };
 
+  // Generate Copilot CLI agents from rules
+  const copilotAgents: Record<string, string> = {};
+  for (const rule of config.rules) {
+    copilotAgents[rule.filename] = createFileWithFrontmatter(rule);
+  }
+
+  // Generate Kiro files
+  const kiroSpecs: Record<string, string> = {};
+  const kiroHooks: Record<string, string> = {};
+  const kiroSteering: Record<string, string> = {};
+
+  for (const rule of config.rules) {
+    const type = rule.frontmatter.type as string | undefined;
+    if (type === "spec") {
+      kiroSpecs[rule.filename] = createFileWithFrontmatter(rule);
+    } else {
+      kiroSteering[rule.filename] = createFileWithFrontmatter(rule);
+    }
+  }
+
+  for (const command of config.commands) {
+    const type = command.frontmatter.type as string | undefined;
+    if (type === "hook") {
+      kiroHooks[command.filename] = createFileWithFrontmatter(command);
+    }
+  }
+
+  // Generate VS Code Copilot files
+  const vscodeCopilotPrompts: Record<string, string> = {};
+  const vscodeCopilotAgents: Record<string, string> = {};
+
+  for (const command of config.commands) {
+    const type = command.frontmatter.type as string | undefined;
+    if (type === "prompt") {
+      vscodeCopilotPrompts[command.filename] =
+        createFileWithFrontmatter(command);
+    } else if (type === "agent") {
+      vscodeCopilotAgents[command.filename] =
+        createFileWithFrontmatter(command);
+    }
+  }
+
+  // Generate Antigravity files
+  const antigravityRules: Record<string, string> = {};
+  const antigravityWorkflows: Record<string, string> = {};
+
+  for (const rule of config.rules) {
+    antigravityRules[rule.filename] = createFileWithFrontmatter(rule);
+  }
+
+  for (const command of config.commands) {
+    const type = command.frontmatter.type as string | undefined;
+    if (type === "workflow") {
+      antigravityWorkflows[command.filename] =
+        createFileWithFrontmatter(command);
+    }
+  }
+
+  // Generate Dropstone workflows
+  const dropstoneWorkflows: Record<string, string> = {};
+  for (const command of config.commands) {
+    const autonomous = command.frontmatter.autonomous;
+    if (autonomous === true) {
+      dropstoneWorkflows[command.filename] = createFileWithFrontmatter(command);
+    }
+  }
+
   return {
     "CLAUDE.md": instructionsContent,
     "GEMINI.md": instructionsContent,
     "AGENTS.md": instructionsContent,
+    "WINDSURF.md": instructionsContent,
+    "QODER.md": instructionsContent,
+    "TRAE.md": instructionsContent,
+    "JULES.md": instructionsContent,
+    "QWEN.md": instructionsContent,
     ".mcp.json": JSON.stringify(config.mcp, null, 2),
     ".cursor/rules": cursorRules,
     ".gemini/settings.json": JSON.stringify(geminiSettings, null, 2),
     "opencode.json": JSON.stringify(openCodeConfig, null, 2),
+    ".copilot/agents": copilotAgents,
+    ".kiro/specs": kiroSpecs,
+    ".kiro/hooks": kiroHooks,
+    ".kiro/steering": kiroSteering,
+    ".kiro/mcp.json": JSON.stringify(config.mcp, null, 2),
+    ".github/copilot-instructions.md": instructionsContent,
+    ".github/copilot-prompts": vscodeCopilotPrompts,
+    ".github/agents": vscodeCopilotAgents,
+    ".agent/rules": antigravityRules,
+    ".agent/workflows": antigravityWorkflows,
+    ".dropstone/workflows": dropstoneWorkflows,
   };
 }
 
