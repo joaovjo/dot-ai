@@ -315,18 +315,11 @@ export async function generateFiles(config: AIConfig): Promise<GeneratedFiles> {
   const antigravityWorkflows: Record<string, string> = {};
 
   for (const rule of config.rules) {
-    const type = rule.frontmatter.type as string | undefined;
-    if (type === "rule") {
-      antigravityRules[rule.filename] = createFileWithFrontmatter(rule);
-    }
+    antigravityRules[rule.filename] = createFileWithFrontmatter(rule);
   }
 
   for (const command of config.commands) {
-    const type = command.frontmatter.type as string | undefined;
-    if (type === "workflow") {
-      antigravityWorkflows[command.filename] =
-        createFileWithFrontmatter(command);
-    }
+    antigravityWorkflows[command.filename] = createFileWithFrontmatter(command);
   }
 
   // Generate Dropstone workflows
