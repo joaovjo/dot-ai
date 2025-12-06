@@ -216,7 +216,8 @@ describe("Migrator Unit Tests", () => {
       expect(detected.vscodeCopilotPrompts).toContain(
         ".github/copilot-prompts/gen-tests.md",
       );
-      expect(detected.vscodeCopilotAgents).toContain(
+      // Note: .github/agents is shared with GitHub Copilot CLI, so files are in copilotRepoAgents
+      expect(detected.copilotRepoAgents).toContain(
         ".github/agents/frontend.md",
       );
     });

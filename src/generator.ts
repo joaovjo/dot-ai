@@ -365,10 +365,17 @@ export async function generateFiles(config: AIConfig): Promise<GeneratedFiles> {
 export async function writeGeneratedFiles(
   files: GeneratedFiles,
 ): Promise<void> {
-  // Write CLAUDE.md, GEMINI.md, and AGENTS.md
+  // Write instruction files (existing providers)
   await Bun.write("CLAUDE.md", files["CLAUDE.md"]);
   await Bun.write("GEMINI.md", files["GEMINI.md"]);
   await Bun.write("AGENTS.md", files["AGENTS.md"]);
+
+  // Write new provider instruction files
+  await Bun.write("WINDSURF.md", files["WINDSURF.md"]);
+  await Bun.write("QODER.md", files["QODER.md"]);
+  await Bun.write("TRAE.md", files["TRAE.md"]);
+  await Bun.write("JULES.md", files["JULES.md"]);
+  await Bun.write("QWEN.md", files["QWEN.md"]);
 
   // Write .mcp.json
   await Bun.write(".mcp.json", files[".mcp.json"]);
@@ -385,6 +392,68 @@ export async function writeGeneratedFiles(
 
   // Write OpenCode config
   await Bun.write("opencode.json", files["opencode.json"]);
+
+  // Write Copilot CLI agents
+  await ensureDirectoryExists(".copilot/agents");
+  for (const [filename, content] of Object.entries(files[".copilot/agents"])) {
+    await Bun.write(`.copilot/agents/${filename}`, content);
+  }
+
+  // Write Kiro files
+  await ensureDirectoryExists(".kiro/specs");
+  for (const [filename, content] of Object.entries(files[".kiro/specs"])) {
+    await Bun.write(`.kiro/specs/${filename}`, content);
+  }
+
+  await ensureDirectoryExists(".kiro/hooks");
+  for (const [filename, content] of Object.entries(files[".kiro/hooks"])) {
+    await Bun.write(`.kiro/hooks/${filename}`, content);
+  }
+
+  await ensureDirectoryExists(".kiro/steering");
+  for (const [filename, content] of Object.entries(files[".kiro/steering"])) {
+    await Bun.write(`.kiro/steering/${filename}`, content);
+  }
+
+  await Bun.write(".kiro/mcp.json", files[".kiro/mcp.json"]);
+
+  // Write VS Code Copilot files
+  await ensureDirectoryExists(".github");
+  await Bun.write(
+    ".github/copilot-instructions.md",
+    files[".github/copilot-instructions.md"],
+  );
+
+  await ensureDirectoryExists(".github/copilot-prompts");
+  for (const [filename, content] of Object.entries(
+    files[".github/copilot-prompts"],
+  )) {
+    await Bun.write(`.github/copilot-prompts/${filename}`, content);
+  }
+
+  await ensureDirectoryExists(".github/agents");
+  for (const [filename, content] of Object.entries(files[".github/agents"])) {
+    await Bun.write(`.github/agents/${filename}`, content);
+  }
+
+  // Write Antigravity files
+  await ensureDirectoryExists(".agent/rules");
+  for (const [filename, content] of Object.entries(files[".agent/rules"])) {
+    await Bun.write(`.agent/rules/${filename}`, content);
+  }
+
+  await ensureDirectoryExists(".agent/workflows");
+  for (const [filename, content] of Object.entries(files[".agent/workflows"])) {
+    await Bun.write(`.agent/workflows/${filename}`, content);
+  }
+
+  // Write Dropstone workflows
+  await ensureDirectoryExists(".dropstone/workflows");
+  for (const [filename, content] of Object.entries(
+    files[".dropstone/workflows"],
+  )) {
+    await Bun.write(`.dropstone/workflows/${filename}`, content);
+  }
 }
 
 export async function runGeneration() {
@@ -407,11 +476,31 @@ export async function runGeneration() {
   await writeGeneratedFiles(files);
 
   console.log("✅ Successfully generated configuration files:");
-  console.log("  - CLAUDE.md");
-  console.log("  - GEMINI.md");
-  console.log("  - AGENTS.md");
-  console.log("  - .mcp.json");
-  console.log("  - .cursor/rules/*.mdc");
-  console.log("  - .gemini/settings.json");
+  console.log("  📄 Instruction files:");
+  console.log("    - CLAUDE.md");
+  console.log("    - GEMINI.md");
+  console.log("    - AGENTS.md");
+  console.log("    - WINDSURF.md");
+  console.log("    - QODER.md");
+  console.log("    - TRAE.md");
+  console.log("    - JULES.md");
+  console.log("    - QWEN.md");
+  console.log("  🔌 MCP Configuration:");
+  console.log("    - .mcp.json");
+  console.log("    - .kiro/mcp.json");
+  console.log("  📁 Provider-specific directories:");
+  console.log("    - .cursor/rules/*.mdc");
+  console.log("    - .gemini/settings.json");
+  console.log("    - .copilot/agents/*.md");
+  console.log("    - .kiro/specs/*.md");
+  console.log("    - .kiro/hooks/*.md");
+  console.log("    - .kiro/steering/*.md");
+  console.log("    - .github/copilot-instructions.md");
+  console.log("    - .github/copilot-prompts/*.md");
+  console.log("    - .github/agents/*.md");
+  console.log("    - .agent/rules/*.md");
+  console.log("    - .agent/workflows/*.md");
+  console.log("    - .dropstone/workflows/*.md");
+  console.log("    - opencode.json");
   console.log("  - opencode.json");
 }
