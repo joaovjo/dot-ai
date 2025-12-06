@@ -277,11 +277,13 @@ export async function generateFiles(config: AIConfig): Promise<GeneratedFiles> {
   const kiroHooks: Record<string, string> = {};
   const kiroSteering: Record<string, string> = {};
 
+  // Only add rules to kiroSteering if their type is in the whitelist or if type is missing
+  const steeringTypes = ["steering", "workflow"]; // Add other valid steering types as needed
   for (const rule of config.rules) {
     const type = rule.frontmatter.type as string | undefined;
     if (type === "spec") {
       kiroSpecs[rule.filename] = createFileWithFrontmatter(rule);
-    } else {
+    } else if (!type || steeringTypes.includes(type)) {
       kiroSteering[rule.filename] = createFileWithFrontmatter(rule);
     }
   }
