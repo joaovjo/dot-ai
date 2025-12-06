@@ -143,7 +143,6 @@ export interface DetectedFiles {
   jules?: string;
   qwen?: string;
   qwenCommands: string[];
-  geminiCLI?: string;
   geminiCLICommands: string[];
   copilotAgents: string[];
   copilotRepoAgents: string[];
