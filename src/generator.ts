@@ -315,7 +315,10 @@ export async function generateFiles(config: AIConfig): Promise<GeneratedFiles> {
   const antigravityWorkflows: Record<string, string> = {};
 
   for (const rule of config.rules) {
-    antigravityRules[rule.filename] = createFileWithFrontmatter(rule);
+    const type = rule.frontmatter.type as string | undefined;
+    if (type === "rule") {
+      antigravityRules[rule.filename] = createFileWithFrontmatter(rule);
+    }
   }
 
   for (const command of config.commands) {
