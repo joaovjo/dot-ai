@@ -154,7 +154,6 @@ export interface DetectedFiles {
   vscodeCopilotInstructions: string[];
   vscodeCopilotPrompts: string[];
   vscodeCopilotAgents: string[];
-  antigravityGlobal?: string;
   antigravityRules: string[];
   antigravityWorkflows: string[];
   dropstoneWorkflows: string[];
