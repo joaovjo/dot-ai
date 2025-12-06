@@ -402,6 +402,131 @@ describe("Migrator Unit Tests", () => {
       expect(merged.mcpServers).toEqual({});
       expect(duplicates).toEqual([]);
     });
+
+    test("should extract MCP config from Copilot CLI", async () => {
+      mkdirSync(".copilot", { recursive: true });
+      await Bun.write(
+        ".copilot/mcp-config.json",
+        JSON.stringify({
+          mcpServers: {
+            github: {
+              type: "stdio",
+              command: "npx",
+              args: ["@modelcontextprotocol/server-github"],
+              env: { GITHUB_TOKEN: "token" },
+            },
+          },
+        }),
+      );
+
+      const { merged } = await extractAllMCPConfigs();
+
+      expect(merged.mcpServers.github).toBeDefined();
+      expect(merged.mcpServers.github?.command).toBe("npx");
+      expect(merged.mcpServers.github?.env).toEqual({ GITHUB_TOKEN: "token" });
+    });
+
+    test("should extract MCP config from Kiro", async () => {
+      mkdirSync(".kiro", { recursive: true });
+      await Bun.write(
+        ".kiro/mcp.json",
+        JSON.stringify({
+          mcpServers: {
+            docker: {
+              type: "stdio",
+              command: "docker-mcp",
+              args: ["--socket", "/var/run/docker.sock"],
+            },
+          },
+        }),
+      );
+
+      const { merged } = await extractAllMCPConfigs();
+
+      expect(merged.mcpServers.docker).toBeDefined();
+      expect(merged.mcpServers.docker?.command).toBe("docker-mcp");
+    });
+
+    test("should merge MCP configs from all new provider sources", async () => {
+      // Create MCP configs from multiple new providers
+      mkdirSync(".copilot", { recursive: true });
+      await Bun.write(
+        ".copilot/mcp-config.json",
+        JSON.stringify({
+          mcpServers: {
+            github: { command: "npx", args: ["github-server"] },
+          },
+        }),
+      );
+
+      mkdirSync(".kiro", { recursive: true });
+      await Bun.write(
+        ".kiro/mcp.json",
+        JSON.stringify({
+          mcpServers: {
+            docker: { command: "docker-mcp" },
+          },
+        }),
+      );
+
+      // Also include existing providers
+      await Bun.write(
+        ".mcp.json",
+        JSON.stringify({
+          mcpServers: {
+            filesystem: { command: "npx", args: ["fs-server"] },
+          },
+        }),
+      );
+
+      const { merged, duplicates } = await extractAllMCPConfigs();
+
+      expect(Object.keys(merged.mcpServers)).toHaveLength(3);
+      expect(merged.mcpServers.github).toBeDefined();
+      expect(merged.mcpServers.docker).toBeDefined();
+      expect(merged.mcpServers.filesystem).toBeDefined();
+      expect(duplicates).toEqual([]);
+    });
+
+    test("should detect duplicates across all MCP sources", async () => {
+      // Same server name in different sources
+      await Bun.write(
+        ".mcp.json",
+        JSON.stringify({
+          mcpServers: {
+            shared: { command: "mcp-v1" },
+          },
+        }),
+      );
+
+      mkdirSync(".copilot", { recursive: true });
+      await Bun.write(
+        ".copilot/mcp-config.json",
+        JSON.stringify({
+          mcpServers: {
+            shared: { command: "mcp-v2" },
+          },
+        }),
+      );
+
+      mkdirSync(".kiro", { recursive: true });
+      await Bun.write(
+        ".kiro/mcp.json",
+        JSON.stringify({
+          mcpServers: {
+            shared: { command: "mcp-v3" },
+          },
+        }),
+      );
+
+      const { merged, duplicates } = await extractAllMCPConfigs();
+
+      expect(duplicates).toContain("shared");
+      // Duplicates array is deduplicated, so "shared" appears once
+      expect(duplicates.length).toBe(1);
+      // Last one wins
+      expect(merged.mcpServers.shared?.command).toBe("mcp-v3");
+    });
   });
 });
 

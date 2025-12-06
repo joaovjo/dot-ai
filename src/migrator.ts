@@ -265,6 +265,42 @@ export async function extractAllMCPConfigs(): Promise<{
     console.warn("Could not read opencode.json:", error);
   }
 
+  // 4. Load from .copilot/mcp-config.json
+  try {
+    if (await Bun.file(".copilot/mcp-config.json").exists()) {
+      const copilotMCP = (await Bun.file(
+        ".copilot/mcp-config.json",
+      ).json()) as MCPConfig;
+      if (copilotMCP.mcpServers) {
+        for (const [name, server] of Object.entries(copilotMCP.mcpServers)) {
+          if (allServers[name]) {
+            duplicates.push(name);
+          }
+          allServers[name] = server;
+        }
+      }
+    }
+  } catch (error) {
+    console.warn("Could not read .copilot/mcp-config.json:", error);
+  }
+
+  // 5. Load from .kiro/mcp.json
+  try {
+    if (await Bun.file(".kiro/mcp.json").exists()) {
+      const kiroMCP = (await Bun.file(".kiro/mcp.json").json()) as MCPConfig;
+      if (kiroMCP.mcpServers) {
+        for (const [name, server] of Object.entries(kiroMCP.mcpServers)) {
+          if (allServers[name]) {
+            duplicates.push(name);
+          }
+          allServers[name] = server;
+        }
+      }
+    }
+  } catch (error) {
+    console.warn("Could not read .kiro/mcp.json:", error);
+  }
+
   return {
     merged: { mcpServers: allServers },
     duplicates: [...new Set(duplicates)], // Remove duplicate names
