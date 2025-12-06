@@ -1,3 +1,4 @@
+import { mkdir, stat } from "fs/promises";
 import type {
   AIConfig,
   GeminiSettings,
@@ -6,6 +7,15 @@ import type {
   OpenCodeConfig,
   RuleFile,
 } from "./types.ts";
+
+export async function directoryExists(path: string): Promise<boolean> {
+  try {
+    const stats = await stat(path);
+    return stats.isDirectory();
+  } catch {
+    return false;
+  }
+}
 
 export async function readAIConfig(aiDir = ".ai"): Promise<AIConfig> {
   // Read instructions
@@ -22,11 +32,9 @@ export async function readAIConfig(aiDir = ".ai"): Promise<AIConfig> {
 
   // Read rules
   const rules: RuleFile[] = [];
-  try {
-    const rulesDir = `${aiDir}/rules`;
-    // Check if directory exists using filesystem
+  const rulesDir = `${aiDir}/rules`;
+  if (await directoryExists(rulesDir)) {
     try {
-      await Bun.$`test -d ${rulesDir}`.quiet();
       const glob = new Bun.Glob("*.md");
       for await (const file of glob.scan({ cwd: rulesDir })) {
         const filePath = `${rulesDir}/${file}`;
@@ -38,29 +46,23 @@ export async function readAIConfig(aiDir = ".ai"): Promise<AIConfig> {
           filename: file,
         });
       }
-    } catch (dirError) {
-      // Directory doesn't exist, skip
+    } catch {
+      console.warn(`Could not read rules from ${aiDir}/rules`);
     }
-  } catch (error) {
-    console.warn(`Could not read rules from ${aiDir}/rules`);
   }
 
   // Read commands (just list them)
   const commands: string[] = [];
-  try {
-    const commandsDir = `${aiDir}/commands`;
-    // Check if directory exists using filesystem
+  const commandsDir = `${aiDir}/commands`;
+  if (await directoryExists(commandsDir)) {
     try {
-      await Bun.$`test -d ${commandsDir}`.quiet();
       const glob = new Bun.Glob("*.md");
       for await (const file of glob.scan({ cwd: commandsDir })) {
         commands.push(file.replace(".md", ""));
       }
-    } catch (dirError) {
-      // Directory doesn't exist, skip
+    } catch {
+      console.warn(`Could not read commands from ${aiDir}/commands`);
     }
-  } catch (error) {
-    console.warn(`Could not read commands from ${aiDir}/commands`);
   }
 
   // Read MCP config
@@ -178,13 +180,7 @@ export function generateInstructions(config: AIConfig): string {
 }
 
 export async function ensureDirectoryExists(path: string): Promise<void> {
-  try {
-    // Check if directory exists
-    await Bun.$`test -d ${path}`.quiet();
-  } catch (error) {
-    // Directory doesn't exist, create it
-    await Bun.$`mkdir -p ${path}`.quiet();
-  }
+  await mkdir(path, { recursive: true });
 }
 
 export async function updateProviderSettings(
@@ -297,9 +293,8 @@ export async function runGeneration() {
 
   // Check if .ai directory exists
   const aiDir = ".ai";
-  try {
-    await Bun.$`test -d ${aiDir}`.quiet();
-  } catch (error) {
+  const hasAiDir = await directoryExists(aiDir);
+  if (!hasAiDir) {
     throw new Error(".ai directory not found in current directory");
   }
 

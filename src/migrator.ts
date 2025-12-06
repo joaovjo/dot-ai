@@ -1,5 +1,5 @@
 import path from "path";
-import { ensureDirectoryExists } from "./generator.ts";
+import { directoryExists, ensureDirectoryExists } from "./generator.ts";
 import type {
   DetectedFiles,
   GeminiSettings,
@@ -37,25 +37,19 @@ export async function detectProviderFiles(): Promise<DetectedFiles> {
   }
 
   // Check for .cursor/rules/
-  try {
-    await Bun.$`test -d .cursor/rules`.quiet();
+  if (await directoryExists(".cursor/rules")) {
     const glob = new Bun.Glob("*.mdc");
     for await (const file of glob.scan({ cwd: ".cursor/rules" })) {
       detected.cursorRules.push(`.cursor/rules/${file}`);
     }
-  } catch {
-    // Directory doesn't exist, skip
   }
 
   // Check for .claude/commands/
-  try {
-    await Bun.$`test -d .claude/commands`.quiet();
+  if (await directoryExists(".claude/commands")) {
     const glob = new Bun.Glob("*.md");
     for await (const file of glob.scan({ cwd: ".claude/commands" })) {
       detected.claudeCommands.push(`.claude/commands/${file}`);
     }
-  } catch {
-    // Directory doesn't exist, skip
   }
 
   return detected;
@@ -204,12 +198,9 @@ Delete this file and add your own commands as needed.
 
 export async function runInit(): Promise<void> {
   // Check if .ai already exists
-  try {
-    await Bun.$`test -d .ai`.quiet();
+  if (await directoryExists(".ai")) {
     console.log("✅ .ai folder already exists - nothing to do!");
     return;
-  } catch (error) {
-    // Directory doesn't exist, continue
   }
 
   // Check for existing provider files

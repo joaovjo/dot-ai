@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, rmSync } from "fs";
+import { stat } from "fs/promises";
 import { join } from "path";
 import {
   generateFiles,
@@ -227,18 +228,10 @@ Test rule content`,
     await writeGeneratedFiles(files);
 
     // Verify directories were created
-    try {
-      await Bun.$`test -d .cursor`.quiet();
-      expect(true).toBe(true); // Directory exists
-    } catch {
-      expect(false).toBe(true); // Directory does not exist
-    }
+    const cursorStats = await stat(".cursor").catch(() => null);
+    expect(cursorStats?.isDirectory()).toBe(true);
 
-    try {
-      await Bun.$`test -d .gemini`.quiet();
-      expect(true).toBe(true); // Directory exists
-    } catch {
-      expect(false).toBe(true); // Directory does not exist
-    }
+    const geminiStats = await stat(".gemini").catch(() => null);
+    expect(geminiStats?.isDirectory()).toBe(true);
   });
 });
