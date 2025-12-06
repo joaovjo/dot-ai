@@ -39,17 +39,92 @@ export interface OpenCodeConfig {
   [key: string]: any;
 }
 
+// New provider-specific configurations
+export interface WindsurfConfig {
+  memories?: Record<string, unknown>;
+  mcp?: MCPConfig;
+}
+
+export interface QoderConfig {
+  questMode?: Record<string, unknown>;
+  mcp?: MCPConfig;
+}
+
+export interface TraeConfig {
+  agents?: Record<string, unknown>;
+}
+
+export interface JulesConfig {
+  agents?: string; // AGENTS.md content
+}
+
+export interface QwenCodeConfig {
+  commands?: Record<string, string>;
+}
+
+export interface GeminiCLIConfig {
+  commands?: Record<string, string>;
+  mcp?: MCPConfig;
+}
+
+export interface CopilotCLIConfig {
+  agents?: Record<string, string>; // ~/.copilot/agents/
+  repoAgents?: Record<string, string>; // .github/agents/
+  mcp?: MCPConfig;
+}
+
+export interface KiroConfig {
+  specs?: Record<string, string>;
+  hooks?: Record<string, string>;
+  steering?: Record<string, string>;
+  mcp?: MCPConfig;
+}
+
+export interface VSCodeCopilotConfig {
+  instructions?: Record<string, string>; // .github/copilot-instructions.md (glob pattern support)
+  prompts?: Record<string, string>; // .github/copilot-prompts/
+  agents?: Record<string, string>; // .github/agents/
+}
+
+export interface AntigravityConfig {
+  globalRules?: string; // ~/.gemini/GEMINI.md
+  rules?: Record<string, string>; // .agent/rules/
+  workflows?: Record<string, string>; // .agent/workflows/
+  mcp?: MCPConfig;
+}
+
+export interface DropstoneConfig {
+  workflows?: Record<string, string>;
+}
+
 export interface GeneratedFiles {
   "CLAUDE.md": string;
   "GEMINI.md": string;
   "AGENTS.md": string;
+  "WINDSURF.md": string;
+  "QODER.md": string;
+  "TRAE.md": string;
+  "JULES.md": string;
+  "QWEN.md": string;
   ".mcp.json": string;
   ".cursor/rules": Record<string, string>;
   ".gemini/settings.json": string;
   "opencode.json": string;
+  ".copilot/agents": Record<string, string>;
+  ".kiro/specs": Record<string, string>;
+  ".kiro/hooks": Record<string, string>;
+  ".kiro/steering": Record<string, string>;
+  ".kiro/mcp.json": string;
+  ".github/copilot-instructions.md": string;
+  ".github/copilot-prompts": Record<string, string>;
+  ".github/agents": Record<string, string>;
+  ".agent/rules": Record<string, string>;
+  ".agent/workflows": Record<string, string>;
+  ".dropstone/workflows": Record<string, string>;
 }
 
 export interface DetectedFiles {
+  // Existing providers
   claude?: string;
   gemini?: string;
   agents?: string;
@@ -58,4 +133,30 @@ export interface DetectedFiles {
   claudeCommands: string[];
   geminiSettings?: string;
   opencode?: string;
+
+  // New providers
+  windsurf?: string;
+  windsurfMemories: string[];
+  qoder?: string;
+  trae?: string;
+  traeAgents: string[];
+  jules?: string;
+  qwen?: string;
+  qwenCommands: string[];
+  geminiCLI?: string;
+  geminiCLICommands: string[];
+  copilotAgents: string[];
+  copilotRepoAgents: string[];
+  copilotMCP?: string;
+  kiroSpecs: string[];
+  kiroHooks: string[];
+  kiroSteering: string[];
+  kiroMCP?: string;
+  vscodeCopilotInstructions: string[];
+  vscodeCopilotPrompts: string[];
+  vscodeCopilotAgents: string[];
+  antigravityGlobal?: string;
+  antigravityRules: string[];
+  antigravityWorkflows: string[];
+  dropstoneWorkflows: string[];
 }
