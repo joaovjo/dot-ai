@@ -502,5 +502,4 @@ export async function runGeneration() {
   console.log("    - .agent/workflows/*.md");
   console.log("    - .dropstone/workflows/*.md");
   console.log("    - opencode.json");
-  console.log("  - opencode.json");
 }
