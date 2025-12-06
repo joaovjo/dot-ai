@@ -166,10 +166,12 @@ export async function detectProviderFiles(): Promise<DetectedFiles> {
       detected.vscodeCopilotPrompts.push(`.github/copilot-prompts/${file}`);
     }
   }
+  // The .github/agents directory is shared between GitHub Copilot CLI and VS Code Copilot.
+  // To avoid duplicate detection, we only scan it once and add files to copilotRepoAgents.
   if (await directoryExists(".github/agents")) {
     const glob = new Bun.Glob("*.md");
     for await (const file of glob.scan({ cwd: ".github/agents" })) {
-      detected.vscodeCopilotAgents.push(`.github/agents/${file}`);
+      detected.copilotRepoAgents.push(`.github/agents/${file}`);
     }
   }
 
