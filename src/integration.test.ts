@@ -120,12 +120,18 @@ Rules for handling forms.`,
 
     // Verify commands
     expect(config.commands).toHaveLength(2);
-    expect(config.commands).toContain("deploy");
-    expect(config.commands).toContain("test");
+    const deployCommand = config.commands.find(
+      (c) => c.filename === "deploy.md",
+    );
+    expect(deployCommand).toBeDefined();
+    expect(deployCommand?.content).toContain("Deploy command documentation");
+    const testCommand = config.commands.find((c) => c.filename === "test.md");
+    expect(testCommand).toBeDefined();
+    expect(testCommand?.content).toContain("Test command documentation");
 
     // Verify MCP config
     expect(config.mcp.mcpServers.jira).toBeDefined();
-    expect(config.mcp.mcpServers.jira!.command).toBe("bun");
+    expect(config.mcp.mcpServers.jira?.command).toBe("bun");
   });
 
   test("should handle missing files gracefully", async () => {

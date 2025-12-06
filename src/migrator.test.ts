@@ -92,6 +92,186 @@ describe("Migrator Unit Tests", () => {
       expect(detected.claudeCommands).toContain(".claude/commands/deploy.md");
       expect(detected.claudeCommands).toContain(".claude/commands/test.md");
     });
+
+    test("should detect Windsurf files", async () => {
+      await Bun.write("WINDSURF.md", "Windsurf instructions");
+      mkdirSync(".windsurf/memories", { recursive: true });
+      await Bun.write(".windsurf/memories/context.json", "{}");
+
+      const detected = await detectProviderFiles();
+
+      expect(detected.windsurf).toBe("WINDSURF.md");
+      expect(detected.windsurfMemories).toContain(
+        ".windsurf/memories/context.json",
+      );
+    });
+
+    test("should detect Qoder files", async () => {
+      await Bun.write("QODER.md", "Qoder instructions");
+
+      const detected = await detectProviderFiles();
+
+      expect(detected.qoder).toBe("QODER.md");
+    });
+
+    test("should detect TRAE files", async () => {
+      await Bun.write("TRAE.md", "TRAE instructions");
+      mkdirSync(".trae/agents", { recursive: true });
+      await Bun.write(".trae/agents/coder.json", "{}");
+
+      const detected = await detectProviderFiles();
+
+      expect(detected.trae).toBe("TRAE.md");
+      expect(detected.traeAgents).toContain(".trae/agents/coder.json");
+    });
+
+    test("should detect Jules AGENTS.md", async () => {
+      await Bun.write("AGENTS.md", "Jules/AGENTS instructions");
+
+      const detected = await detectProviderFiles();
+
+      expect(detected.jules).toBe("AGENTS.md");
+      // Should also be detected as agents
+      expect(detected.agents).toBe("AGENTS.md");
+    });
+
+    test("should detect Qwen Code files", async () => {
+      await Bun.write("QWEN.md", "Qwen instructions");
+      mkdirSync(".qwen-code/commands", { recursive: true });
+      await Bun.write(".qwen-code/commands/test.md", "Test command");
+
+      const detected = await detectProviderFiles();
+
+      expect(detected.qwen).toBe("QWEN.md");
+      expect(detected.qwenCommands).toContain(".qwen-code/commands/test.md");
+    });
+
+    test("should detect Gemini CLI files", async () => {
+      mkdirSync(".gemini", { recursive: true });
+      await Bun.write(".gemini/commands/deploy.md", "Deploy");
+      await Bun.write(".gemini/mcp-config.json", "{}");
+
+      const detected = await detectProviderFiles();
+
+      expect(detected.geminiCLICommands).toContain(
+        ".gemini/commands/deploy.md",
+      );
+    });
+
+    test("should detect GitHub Copilot CLI files", async () => {
+      mkdirSync(".copilot/agents", { recursive: true });
+      await Bun.write(".copilot/agents/planner.md", "Planner agent");
+      await Bun.write(".copilot/mcp-config.json", "{}");
+
+      mkdirSync(".github/agents", { recursive: true });
+      await Bun.write(".github/agents/reviewer.md", "Reviewer agent");
+
+      const detected = await detectProviderFiles();
+
+      expect(detected.copilotAgents).toContain(".copilot/agents/planner.md");
+      expect(detected.copilotRepoAgents).toContain(
+        ".github/agents/reviewer.md",
+      );
+      expect(detected.copilotMCP).toBe(".copilot/mcp-config.json");
+    });
+
+    test("should detect Kiro files", async () => {
+      mkdirSync(".kiro/specs", { recursive: true });
+      await Bun.write(".kiro/specs/feature.md", "Feature spec");
+
+      mkdirSync(".kiro/hooks", { recursive: true });
+      await Bun.write(".kiro/hooks/pre-commit.md", "Pre-commit hook");
+
+      mkdirSync(".kiro/steering", { recursive: true });
+      await Bun.write(".kiro/steering/coding.md", "Coding rules");
+
+      await Bun.write(".kiro/mcp.json", "{}");
+
+      const detected = await detectProviderFiles();
+
+      expect(detected.kiroSpecs).toContain(".kiro/specs/feature.md");
+      expect(detected.kiroHooks).toContain(".kiro/hooks/pre-commit.md");
+      expect(detected.kiroSteering).toContain(".kiro/steering/coding.md");
+      expect(detected.kiroMCP).toBe(".kiro/mcp.json");
+    });
+
+    test("should detect VS Code Copilot files", async () => {
+      mkdirSync(".github", { recursive: true });
+      await Bun.write(
+        ".github/copilot-instructions.md",
+        "VS Code instructions",
+      );
+
+      mkdirSync(".github/copilot-prompts", { recursive: true });
+      await Bun.write(".github/copilot-prompts/gen-tests.md", "Generate tests");
+
+      mkdirSync(".github/agents", { recursive: true });
+      await Bun.write(".github/agents/frontend.md", "Frontend agent");
+
+      const detected = await detectProviderFiles();
+
+      expect(detected.vscodeCopilotInstructions).toContain(
+        ".github/copilot-instructions.md",
+      );
+      expect(detected.vscodeCopilotPrompts).toContain(
+        ".github/copilot-prompts/gen-tests.md",
+      );
+      expect(detected.vscodeCopilotAgents).toContain(
+        ".github/agents/frontend.md",
+      );
+    });
+
+    test("should detect Antigravity files", async () => {
+      // Global rules in home directory would normally be in ~/.gemini/GEMINI.md
+      // For test, we'll just check workspace files
+
+      mkdirSync(".agent/rules", { recursive: true });
+      await Bun.write(".agent/rules/general.md", "General rules");
+
+      mkdirSync(".agent/workflows", { recursive: true });
+      await Bun.write(".agent/workflows/deploy.md", "Deploy workflow");
+
+      const detected = await detectProviderFiles();
+
+      expect(detected.antigravityRules).toContain(".agent/rules/general.md");
+      expect(detected.antigravityWorkflows).toContain(
+        ".agent/workflows/deploy.md",
+      );
+    });
+
+    test("should detect Dropstone workflows", async () => {
+      mkdirSync(".dropstone/workflows", { recursive: true });
+      await Bun.write(".dropstone/workflows/auto-fix.md", "Auto-fix workflow");
+
+      const detected = await detectProviderFiles();
+
+      expect(detected.dropstoneWorkflows).toContain(
+        ".dropstone/workflows/auto-fix.md",
+      );
+    });
+
+    test("should detect multiple provider files simultaneously", async () => {
+      // Create files from multiple providers
+      await Bun.write("CLAUDE.md", "Claude");
+      await Bun.write("WINDSURF.md", "Windsurf");
+      await Bun.write("QODER.md", "Qoder");
+      await Bun.write("AGENTS.md", "Jules/Agents");
+
+      mkdirSync(".copilot/agents", { recursive: true });
+      await Bun.write(".copilot/agents/test.md", "Test agent");
+
+      mkdirSync(".kiro/specs", { recursive: true });
+      await Bun.write(".kiro/specs/feature.md", "Feature");
+
+      const detected = await detectProviderFiles();
+
+      expect(detected.claude).toBe("CLAUDE.md");
+      expect(detected.windsurf).toBe("WINDSURF.md");
+      expect(detected.qoder).toBe("QODER.md");
+      expect(detected.jules).toBe("AGENTS.md");
+      expect(detected.copilotAgents).toHaveLength(1);
+      expect(detected.kiroSpecs).toHaveLength(1);
+    });
   });
 
   describe("extractAllMCPConfigs", () => {
@@ -204,7 +384,7 @@ describe("Migrator Unit Tests", () => {
         }),
       );
 
-      const { merged, duplicates } = await extractAllMCPConfigs();
+      const { merged } = await extractAllMCPConfigs();
 
       expect(merged.mcpServers.test).toEqual({
         type: "stdio",
@@ -416,7 +596,7 @@ Test rule content`,
     const config = await readAIConfig(".ai");
     expect(config.instructions).toContain("Test instructions");
     expect(config.rules).toHaveLength(1);
-    expect(config.rules[0]!.content).toContain("Test rule content");
+    expect(config.rules[0]?.content).toContain("Test rule content");
     expect(config.mcp.mcpServers.test).toBeDefined();
 
     // Should be able to generate files from migrated config

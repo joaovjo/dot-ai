@@ -12,9 +12,24 @@ export async function detectProviderFiles(): Promise<DetectedFiles> {
   const detected: DetectedFiles = {
     cursorRules: [],
     claudeCommands: [],
+    windsurfMemories: [],
+    traeAgents: [],
+    qwenCommands: [],
+    geminiCLICommands: [],
+    copilotAgents: [],
+    copilotRepoAgents: [],
+    kiroSpecs: [],
+    kiroHooks: [],
+    kiroSteering: [],
+    vscodeCopilotInstructions: [],
+    vscodeCopilotPrompts: [],
+    vscodeCopilotAgents: [],
+    antigravityRules: [],
+    antigravityWorkflows: [],
+    dropstoneWorkflows: [],
   };
 
-  // Check for instruction files
+  // Check for instruction files (existing providers)
   if (await Bun.file("CLAUDE.md").exists()) {
     detected.claude = "CLAUDE.md";
   }
@@ -23,9 +38,24 @@ export async function detectProviderFiles(): Promise<DetectedFiles> {
   }
   if (await Bun.file("AGENTS.md").exists()) {
     detected.agents = "AGENTS.md";
+    detected.jules = "AGENTS.md"; // Jules also uses AGENTS.md
   }
 
-  // Check for MCP files
+  // Check for new provider instruction files
+  if (await Bun.file("WINDSURF.md").exists()) {
+    detected.windsurf = "WINDSURF.md";
+  }
+  if (await Bun.file("QODER.md").exists()) {
+    detected.qoder = "QODER.md";
+  }
+  if (await Bun.file("TRAE.md").exists()) {
+    detected.trae = "TRAE.md";
+  }
+  if (await Bun.file("QWEN.md").exists()) {
+    detected.qwen = "QWEN.md";
+  }
+
+  // Check for MCP files (existing)
   if (await Bun.file(".mcp.json").exists()) {
     detected.mcp = ".mcp.json";
   }
@@ -36,7 +66,15 @@ export async function detectProviderFiles(): Promise<DetectedFiles> {
     detected.opencode = "opencode.json";
   }
 
-  // Check for .cursor/rules/
+  // Check for new provider MCP files
+  if (await Bun.file(".copilot/mcp-config.json").exists()) {
+    detected.copilotMCP = ".copilot/mcp-config.json";
+  }
+  if (await Bun.file(".kiro/mcp.json").exists()) {
+    detected.kiroMCP = ".kiro/mcp.json";
+  }
+
+  // Check for .cursor/rules/ (existing)
   if (await directoryExists(".cursor/rules")) {
     const glob = new Bun.Glob("*.mdc");
     for await (const file of glob.scan({ cwd: ".cursor/rules" })) {
@@ -44,11 +82,116 @@ export async function detectProviderFiles(): Promise<DetectedFiles> {
     }
   }
 
-  // Check for .claude/commands/
+  // Check for .claude/commands/ (existing)
   if (await directoryExists(".claude/commands")) {
     const glob = new Bun.Glob("*.md");
     for await (const file of glob.scan({ cwd: ".claude/commands" })) {
       detected.claudeCommands.push(`.claude/commands/${file}`);
+    }
+  }
+
+  // Check for Windsurf memories
+  if (await directoryExists(".windsurf/memories")) {
+    const glob = new Bun.Glob("*.json");
+    for await (const file of glob.scan({ cwd: ".windsurf/memories" })) {
+      detected.windsurfMemories.push(`.windsurf/memories/${file}`);
+    }
+  }
+
+  // Check for TRAE agents
+  if (await directoryExists(".trae/agents")) {
+    const glob = new Bun.Glob("*.json");
+    for await (const file of glob.scan({ cwd: ".trae/agents" })) {
+      detected.traeAgents.push(`.trae/agents/${file}`);
+    }
+  }
+
+  // Check for Qwen Code commands
+  if (await directoryExists(".qwen-code/commands")) {
+    const glob = new Bun.Glob("*.md");
+    for await (const file of glob.scan({ cwd: ".qwen-code/commands" })) {
+      detected.qwenCommands.push(`.qwen-code/commands/${file}`);
+    }
+  }
+
+  // Check for Gemini CLI commands
+  if (await directoryExists(".gemini/commands")) {
+    const glob = new Bun.Glob("*.md");
+    for await (const file of glob.scan({ cwd: ".gemini/commands" })) {
+      detected.geminiCLICommands.push(`.gemini/commands/${file}`);
+    }
+  }
+
+  // Check for GitHub Copilot CLI agents (workspace and repo)
+  if (await directoryExists(".copilot/agents")) {
+    const glob = new Bun.Glob("*.md");
+    for await (const file of glob.scan({ cwd: ".copilot/agents" })) {
+      detected.copilotAgents.push(`.copilot/agents/${file}`);
+    }
+  }
+  if (await directoryExists(".github/agents")) {
+    const glob = new Bun.Glob("*.md");
+    for await (const file of glob.scan({ cwd: ".github/agents" })) {
+      detected.copilotRepoAgents.push(`.github/agents/${file}`);
+    }
+  }
+
+  // Check for Kiro files
+  if (await directoryExists(".kiro/specs")) {
+    const glob = new Bun.Glob("*.md");
+    for await (const file of glob.scan({ cwd: ".kiro/specs" })) {
+      detected.kiroSpecs.push(`.kiro/specs/${file}`);
+    }
+  }
+  if (await directoryExists(".kiro/hooks")) {
+    const glob = new Bun.Glob("*.md");
+    for await (const file of glob.scan({ cwd: ".kiro/hooks" })) {
+      detected.kiroHooks.push(`.kiro/hooks/${file}`);
+    }
+  }
+  if (await directoryExists(".kiro/steering")) {
+    const glob = new Bun.Glob("*.md");
+    for await (const file of glob.scan({ cwd: ".kiro/steering" })) {
+      detected.kiroSteering.push(`.kiro/steering/${file}`);
+    }
+  }
+
+  // Check for VS Code Copilot files
+  if (await Bun.file(".github/copilot-instructions.md").exists()) {
+    detected.vscodeCopilotInstructions.push(".github/copilot-instructions.md");
+  }
+  if (await directoryExists(".github/copilot-prompts")) {
+    const glob = new Bun.Glob("*.md");
+    for await (const file of glob.scan({ cwd: ".github/copilot-prompts" })) {
+      detected.vscodeCopilotPrompts.push(`.github/copilot-prompts/${file}`);
+    }
+  }
+  if (await directoryExists(".github/agents")) {
+    const glob = new Bun.Glob("*.md");
+    for await (const file of glob.scan({ cwd: ".github/agents" })) {
+      detected.vscodeCopilotAgents.push(`.github/agents/${file}`);
+    }
+  }
+
+  // Check for Antigravity files
+  if (await directoryExists(".agent/rules")) {
+    const glob = new Bun.Glob("*.md");
+    for await (const file of glob.scan({ cwd: ".agent/rules" })) {
+      detected.antigravityRules.push(`.agent/rules/${file}`);
+    }
+  }
+  if (await directoryExists(".agent/workflows")) {
+    const glob = new Bun.Glob("*.md");
+    for await (const file of glob.scan({ cwd: ".agent/workflows" })) {
+      detected.antigravityWorkflows.push(`.agent/workflows/${file}`);
+    }
+  }
+
+  // Check for Dropstone workflows
+  if (await directoryExists(".dropstone/workflows")) {
+    const glob = new Bun.Glob("*.md");
+    for await (const file of glob.scan({ cwd: ".dropstone/workflows" })) {
+      detected.dropstoneWorkflows.push(`.dropstone/workflows/${file}`);
     }
   }
 
@@ -227,7 +370,7 @@ export async function runInit(): Promise<void> {
     await ensureDirectoryExists(".ai/rules");
     await ensureDirectoryExists(".ai/commands");
 
-    let createdFiles: string[] = [];
+    const createdFiles: string[] = [];
 
     // Migrate instructions - concatenate CLAUDE.md + GEMINI.md + AGENTS.md
     let instructions = "";
