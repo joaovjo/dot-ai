@@ -559,13 +559,6 @@ export async function runInit(): Promise<void> {
       await Bun.write(`.ai/commands/${filename}`, content);
       totalCommands++;
     }
-    for (const agentFile of detected.vscodeCopilotAgents) {
-      const content = await Bun.file(agentFile).text();
-      const filename = path.basename(agentFile);
-      await Bun.write(`.ai/commands/${filename}`, content);
-      totalCommands++;
-    }
-
     // Antigravity workflows
     for (const workflowFile of detected.antigravityWorkflows) {
       const content = await Bun.file(workflowFile).text();
