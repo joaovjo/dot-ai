@@ -729,4 +729,298 @@ Test rule content`,
     expect(files["CLAUDE.md"]).toContain("Test instructions");
     expect(files["CLAUDE.md"]).toContain("Test rule content");
   });
+
+  test("should migrate Windsurf configuration to .ai folder", async () => {
+    await Bun.write(
+      "WINDSURF.md",
+      "# Windsurf Instructions\n\nUse Cascade mode.",
+    );
+
+    mkdirSync(".windsurf/memories", { recursive: true });
+    await Bun.write(
+      ".windsurf/memories/project.json",
+      JSON.stringify({
+        context: "Frontend React project",
+      }),
+    );
+
+    await runInit();
+
+    const { readAIConfig } = await import("./generator.ts");
+    const config = await readAIConfig(".ai");
+
+    expect(config.instructions).toContain("Windsurf Instructions");
+    expect(config.instructions).toContain("Cascade mode");
+    // Memories are optional - just verify migration worked
+    expect(await Bun.file(".ai/instructions.md").exists()).toBe(true);
+  });
+
+  test("should migrate Qoder configuration to .ai folder", async () => {
+    await Bun.write(
+      "QODER.md",
+      "# Qoder Instructions\n\nFocus on code quality.",
+    );
+
+    await runInit();
+
+    const { readAIConfig } = await import("./generator.ts");
+    const config = await readAIConfig(".ai");
+
+    expect(config.instructions).toContain("Qoder Instructions");
+    expect(config.instructions).toContain("code quality");
+  });
+
+  test("should migrate TRAE configuration to .ai folder", async () => {
+    await Bun.write(
+      "TRAE.md",
+      "# TRAE Instructions\n\nUse autonomous workflows.",
+    );
+
+    mkdirSync(".trae/agents", { recursive: true });
+    await Bun.write(
+      ".trae/agents/coder.json",
+      JSON.stringify({
+        name: "coder",
+        role: "coding assistant",
+      }),
+    );
+
+    await runInit();
+
+    const { readAIConfig } = await import("./generator.ts");
+    const config = await readAIConfig(".ai");
+
+    expect(config.instructions).toContain("TRAE Instructions");
+    expect(config.instructions).toContain("autonomous workflows");
+  });
+
+  test("should migrate Qwen Code configuration to .ai folder", async () => {
+    await Bun.write("QWEN.md", "# Qwen Instructions\n\nOptimize for speed.");
+
+    mkdirSync(".qwen-code/commands", { recursive: true });
+    await Bun.write(
+      ".qwen-code/commands/optimize.md",
+      "Run performance optimization",
+    );
+
+    await runInit();
+
+    const { readAIConfig } = await import("./generator.ts");
+    const config = await readAIConfig(".ai");
+
+    expect(config.instructions).toContain("Qwen Instructions");
+    expect(config.instructions).toContain("Optimize for speed");
+
+    // Verify command was migrated
+    expect(config.commands.length).toBeGreaterThan(0);
+    const optimizeCmd = config.commands.find(
+      (c) => c.filename === "optimize.md",
+    );
+    expect(optimizeCmd).toBeDefined();
+  });
+
+  test("should migrate GitHub Copilot CLI agents to .ai folder", async () => {
+    mkdirSync(".copilot/agents", { recursive: true });
+    await Bun.write(
+      ".copilot/agents/reviewer.md",
+      `---
+name: Code Reviewer
+description: Reviews pull requests
+---
+
+Review code for best practices.`,
+    );
+
+    mkdirSync(".copilot", { recursive: true });
+    await Bun.write(
+      ".copilot/mcp-config.json",
+      JSON.stringify({
+        mcpServers: {
+          github: {
+            command: "npx",
+            args: ["@modelcontextprotocol/server-github"],
+          },
+        },
+      }),
+    );
+
+    await runInit();
+
+    const { readAIConfig } = await import("./generator.ts");
+    const config = await readAIConfig(".ai");
+
+    // Commands should include the agent
+    const reviewerAgent = config.commands.find(
+      (c) => c.filename === "reviewer.md",
+    );
+    expect(reviewerAgent).toBeDefined();
+    expect(reviewerAgent?.frontmatter.name).toBe("Code Reviewer");
+
+    // MCP should be merged
+    expect(config.mcp.mcpServers.github).toBeDefined();
+  });
+
+  test("should migrate Kiro configuration to .ai folder", async () => {
+    mkdirSync(".kiro/specs", { recursive: true });
+    await Bun.write(
+      ".kiro/specs/feature.md",
+      "## Feature Spec\n\nImplement new dashboard",
+    );
+
+    mkdirSync(".kiro/hooks", { recursive: true });
+    await Bun.write(
+      ".kiro/hooks/pre-commit.md",
+      `---
+type: hook
+trigger: pre-commit
+---
+
+Run linting before commit`,
+    );
+
+    mkdirSync(".kiro/steering", { recursive: true });
+    await Bun.write(
+      ".kiro/steering/code-style.md",
+      "# Code Style\n\nUse TypeScript strict mode",
+    );
+
+    await Bun.write(
+      ".kiro/mcp.json",
+      JSON.stringify({
+        mcpServers: {
+          docker: { command: "docker-mcp" },
+        },
+      }),
+    );
+
+    await runInit();
+
+    const { readAIConfig } = await import("./generator.ts");
+    const config = await readAIConfig(".ai");
+
+    // Specs, hooks, and steering should be in commands/rules
+    expect(config.commands.length + config.rules.length).toBeGreaterThan(0);
+
+    // MCP should be merged
+    expect(config.mcp.mcpServers.docker).toBeDefined();
+  });
+
+  test("should migrate VS Code Copilot configuration to .ai folder", async () => {
+    mkdirSync(".github", { recursive: true });
+    await Bun.write(".github/copilot-instructions.md", "Use concise responses");
+
+    mkdirSync(".github/copilot-prompts", { recursive: true });
+    await Bun.write(
+      ".github/copilot-prompts/generate-tests.md",
+      "Generate comprehensive test cases",
+    );
+
+    await runInit();
+
+    const { readAIConfig } = await import("./generator.ts");
+    const config = await readAIConfig(".ai");
+
+    // Instructions should be included
+    expect(config.instructions).toContain("concise responses");
+
+    // Prompts should be in commands
+    const testPrompt = config.commands.find(
+      (c) => c.filename === "generate-tests.md",
+    );
+    expect(testPrompt).toBeDefined();
+  });
+
+  test("should migrate Antigravity configuration to .ai folder", async () => {
+    mkdirSync(".agent/rules", { recursive: true });
+    await Bun.write(
+      ".agent/rules/general.md",
+      `---
+priority: high
+---
+
+Follow clean code principles`,
+    );
+
+    mkdirSync(".agent/workflows", { recursive: true });
+    await Bun.write(
+      ".agent/workflows/deploy.md",
+      `---
+type: workflow
+---
+
+Deploy to production`,
+    );
+
+    await runInit();
+
+    const { readAIConfig } = await import("./generator.ts");
+    const config = await readAIConfig(".ai");
+
+    // Rules and workflows should be migrated
+    const generalRule = config.rules.find((r) => r.filename === "general.md");
+    expect(generalRule).toBeDefined();
+    expect(generalRule?.frontmatter.priority).toBe("high");
+
+    const deployWorkflow = config.commands.find(
+      (c) => c.filename === "deploy.md",
+    );
+    expect(deployWorkflow).toBeDefined();
+    expect(deployWorkflow?.frontmatter.type).toBe("workflow");
+  });
+
+  test("should migrate Dropstone workflows to .ai folder", async () => {
+    mkdirSync(".dropstone/workflows", { recursive: true });
+    await Bun.write(
+      ".dropstone/workflows/auto-fix.md",
+      `---
+autonomous: true
+---
+
+Automatically fix linting errors`,
+    );
+
+    await runInit();
+
+    const { readAIConfig } = await import("./generator.ts");
+    const config = await readAIConfig(".ai");
+
+    // Workflow should be in commands
+    const autoFixWorkflow = config.commands.find(
+      (c) => c.filename === "auto-fix.md",
+    );
+    expect(autoFixWorkflow).toBeDefined();
+    expect(autoFixWorkflow?.frontmatter.autonomous).toBe(true);
+  });
+
+  test("should migrate multiple new providers simultaneously", async () => {
+    // Create configs from multiple new providers
+    await Bun.write("WINDSURF.md", "Windsurf config");
+    await Bun.write("QODER.md", "Qoder config");
+    await Bun.write("TRAE.md", "TRAE config");
+
+    mkdirSync(".copilot/agents", { recursive: true });
+    await Bun.write(".copilot/agents/test.md", "Test agent");
+
+    mkdirSync(".kiro/specs", { recursive: true });
+    await Bun.write(".kiro/specs/feature.md", "Feature spec");
+
+    mkdirSync(".agent/rules", { recursive: true });
+    await Bun.write(".agent/rules/style.md", "Style rules");
+
+    mkdirSync(".dropstone/workflows", { recursive: true });
+    await Bun.write(".dropstone/workflows/auto.md", "Auto workflow");
+
+    await runInit();
+
+    const { readAIConfig } = await import("./generator.ts");
+    const config = await readAIConfig(".ai");
+
+    // All instructions should be merged
+    expect(config.instructions).toContain("Windsurf config");
+    expect(config.instructions).toContain("Qoder config");
+    expect(config.instructions).toContain("TRAE config");
+
+    // All commands/rules should be migrated
+    expect(config.commands.length + config.rules.length).toBeGreaterThan(3);
+  });
 });

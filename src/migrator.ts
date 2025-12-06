@@ -390,11 +390,33 @@ export async function runInit(): Promise<void> {
     detected.claude ||
     detected.gemini ||
     detected.agents ||
+    detected.windsurf ||
+    detected.qoder ||
+    detected.trae ||
+    detected.jules ||
+    detected.qwen ||
     detected.cursorRules.length > 0 ||
     detected.claudeCommands.length > 0 ||
+    detected.windsurfMemories.length > 0 ||
+    detected.traeAgents.length > 0 ||
+    detected.qwenCommands.length > 0 ||
+    detected.geminiCLICommands.length > 0 ||
+    detected.copilotAgents.length > 0 ||
+    detected.copilotRepoAgents.length > 0 ||
+    detected.kiroSpecs.length > 0 ||
+    detected.kiroHooks.length > 0 ||
+    detected.kiroSteering.length > 0 ||
+    detected.vscodeCopilotInstructions.length > 0 ||
+    detected.vscodeCopilotPrompts.length > 0 ||
+    detected.vscodeCopilotAgents.length > 0 ||
+    detected.antigravityRules.length > 0 ||
+    detected.antigravityWorkflows.length > 0 ||
+    detected.dropstoneWorkflows.length > 0 ||
     detected.mcp ||
     detected.geminiSettings ||
-    detected.opencode;
+    detected.opencode ||
+    detected.copilotMCP ||
+    detected.kiroMCP;
 
   if (hasAnyFiles) {
     // Run migration logic
@@ -408,7 +430,7 @@ export async function runInit(): Promise<void> {
 
     const createdFiles: string[] = [];
 
-    // Migrate instructions - concatenate CLAUDE.md + GEMINI.md + AGENTS.md
+    // Migrate instructions - concatenate all instruction files
     let instructions = "";
     if (detected.claude) {
       instructions += await Bun.file(detected.claude).text();
@@ -421,6 +443,27 @@ export async function runInit(): Promise<void> {
       if (instructions) instructions += "\n\n---\n\n";
       instructions += await Bun.file(detected.agents).text();
     }
+    if (detected.windsurf) {
+      if (instructions) instructions += "\n\n---\n\n";
+      instructions += await Bun.file(detected.windsurf).text();
+    }
+    if (detected.qoder) {
+      if (instructions) instructions += "\n\n---\n\n";
+      instructions += await Bun.file(detected.qoder).text();
+    }
+    if (detected.trae) {
+      if (instructions) instructions += "\n\n---\n\n";
+      instructions += await Bun.file(detected.trae).text();
+    }
+    if (detected.qwen) {
+      if (instructions) instructions += "\n\n---\n\n";
+      instructions += await Bun.file(detected.qwen).text();
+    }
+    // VS Code Copilot instructions
+    for (const instructionFile of detected.vscodeCopilotInstructions) {
+      if (instructions) instructions += "\n\n---\n\n";
+      instructions += await Bun.file(instructionFile).text();
+    }
     if (instructions) {
       await Bun.write(".ai/instructions.md", instructions);
       createdFiles.push(".ai/instructions.md");
@@ -432,20 +475,113 @@ export async function runInit(): Promise<void> {
       const filename = path.basename(ruleFile).replace(".mdc", ".md");
       await Bun.write(`.ai/rules/${filename}`, content);
     }
-    if (detected.cursorRules.length > 0) {
-      createdFiles.push(`.ai/rules/ (${detected.cursorRules.length} files)`);
+    // Antigravity rules
+    for (const ruleFile of detected.antigravityRules) {
+      const content = await Bun.file(ruleFile).text();
+      const filename = path.basename(ruleFile);
+      await Bun.write(`.ai/rules/${filename}`, content);
+    }
+    const totalRules =
+      detected.cursorRules.length + detected.antigravityRules.length;
+    if (totalRules > 0) {
+      createdFiles.push(`.ai/rules/ (${totalRules} files)`);
     }
 
     // Migrate commands
+    let totalCommands = 0;
+
+    // Claude commands
     for (const commandFile of detected.claudeCommands) {
       const content = await Bun.file(commandFile).text();
       const filename = path.basename(commandFile);
       await Bun.write(`.ai/commands/${filename}`, content);
+      totalCommands++;
     }
-    if (detected.claudeCommands.length > 0) {
-      createdFiles.push(
-        `.ai/commands/ (${detected.claudeCommands.length} files)`,
-      );
+
+    // Qwen Code commands
+    for (const commandFile of detected.qwenCommands) {
+      const content = await Bun.file(commandFile).text();
+      const filename = path.basename(commandFile);
+      await Bun.write(`.ai/commands/${filename}`, content);
+      totalCommands++;
+    }
+
+    // Gemini CLI commands
+    for (const commandFile of detected.geminiCLICommands) {
+      const content = await Bun.file(commandFile).text();
+      const filename = path.basename(commandFile);
+      await Bun.write(`.ai/commands/${filename}`, content);
+      totalCommands++;
+    }
+
+    // Copilot CLI agents (workspace)
+    for (const agentFile of detected.copilotAgents) {
+      const content = await Bun.file(agentFile).text();
+      const filename = path.basename(agentFile);
+      await Bun.write(`.ai/commands/${filename}`, content);
+      totalCommands++;
+    }
+
+    // Copilot CLI agents (repo)
+    for (const agentFile of detected.copilotRepoAgents) {
+      const content = await Bun.file(agentFile).text();
+      const filename = path.basename(agentFile);
+      await Bun.write(`.ai/commands/${filename}`, content);
+      totalCommands++;
+    }
+
+    // Kiro specs, hooks, and steering
+    for (const specFile of detected.kiroSpecs) {
+      const content = await Bun.file(specFile).text();
+      const filename = path.basename(specFile);
+      await Bun.write(`.ai/commands/${filename}`, content);
+      totalCommands++;
+    }
+    for (const hookFile of detected.kiroHooks) {
+      const content = await Bun.file(hookFile).text();
+      const filename = path.basename(hookFile);
+      await Bun.write(`.ai/commands/${filename}`, content);
+      totalCommands++;
+    }
+    for (const steeringFile of detected.kiroSteering) {
+      const content = await Bun.file(steeringFile).text();
+      const filename = path.basename(steeringFile);
+      await Bun.write(`.ai/commands/${filename}`, content);
+      totalCommands++;
+    }
+
+    // VS Code Copilot prompts and agents
+    for (const promptFile of detected.vscodeCopilotPrompts) {
+      const content = await Bun.file(promptFile).text();
+      const filename = path.basename(promptFile);
+      await Bun.write(`.ai/commands/${filename}`, content);
+      totalCommands++;
+    }
+    for (const agentFile of detected.vscodeCopilotAgents) {
+      const content = await Bun.file(agentFile).text();
+      const filename = path.basename(agentFile);
+      await Bun.write(`.ai/commands/${filename}`, content);
+      totalCommands++;
+    }
+
+    // Antigravity workflows
+    for (const workflowFile of detected.antigravityWorkflows) {
+      const content = await Bun.file(workflowFile).text();
+      const filename = path.basename(workflowFile);
+      await Bun.write(`.ai/commands/${filename}`, content);
+      totalCommands++;
+    }
+
+    // Dropstone workflows
+    for (const workflowFile of detected.dropstoneWorkflows) {
+      const content = await Bun.file(workflowFile).text();
+      const filename = path.basename(workflowFile);
+      await Bun.write(`.ai/commands/${filename}`, content);
+      totalCommands++;
+    }
+
+    if (totalCommands > 0) {
+      createdFiles.push(`.ai/commands/ (${totalCommands} files)`);
     }
 
     // Merge MCP configs
